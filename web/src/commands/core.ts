@@ -1,7 +1,7 @@
 import { openUrlImport } from '../url-import';
 import { savePreferences } from '../saved-preferences';
 import { addInstance, arrangeAll, canBoolean, canExport, cancelSlice, download, fillBed, openFileDialog, outputKind,
-  removeInstance, setInstanceCount, slice, STALE_RESULT_TIP, toggleBoolean, toggleSvg, toggleText, toolbarOperation, outsideVolumeWarning } from '../actions';
+  removeInstance, setInstanceCount, slice, openPreview, STALE_RESULT_TIP, toggleBoolean, toggleSvg, toggleText, toolbarOperation, outsideVolumeWarning } from '../actions';
 import { canDrop, canPaste, centreSelection, copySelection, cutSelection, dropSelection, mirrorSelection, pasteClipboard, selectAll, startRename } from '../edit';
 import { deleteAll, getState, removeSelected, setState, togglePrintable, type Gizmo, type State } from '../state/store';
 import { redo, redoName, undo, undoName } from '../state/history';
@@ -116,7 +116,7 @@ export const CORE: Command[] = [
   { id: 'plate.flush', title: 'Flushing volumes…', group: 'Plate', keywords: 'purge wipe', run: () => setState({ flushDialog: true }) },
 
   { id: 'view.prepare', title: 'Model', group: 'View', keys: 'L', keywords: 'prepare tab switch 3d', run: () => setState({ tab: 'prepare' }) },
-  { id: 'view.preview', title: 'Layers', group: 'View', keys: 'L', keywords: 'preview tab switch toolpaths', run: () => setState({ tab: 'preview' }) },
+  { id: 'view.preview', title: 'Layers', group: 'View', keys: 'L', keywords: 'preview tab switch toolpaths', run: openPreview },
   { id: 'view.fit', title: 'Zoom to selection', group: 'View', keywords: 'fit frame focus', run: () => window.dispatchEvent(new Event('camera-fit')) },
   ...CAMERA_VIEWS.map((label, i): Command => ({ id: `view.cam.${VIEW_DIRECTIONS[i]}`, title: i ? `${label} view` : label, group: 'View', keys: String(i), keywords: 'camera', run: () => cameraCommand(VIEW_DIRECTIONS[i]) })),
   { id: 'view.sidebar', title: 'Show / hide sidebar', group: 'View', keys: 'Mod+\\', run: () => toggleSidebar() },

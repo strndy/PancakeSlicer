@@ -23,7 +23,7 @@ import { arrange, bakeStl, bedBounds, instanceBox, loadMesh, loadProject, nextFr
 import { projectEdits } from './plater/projectTransforms';
 import { confirmDialog, numberDialog, promptDialog } from './components/Ask';
 import {
-  IDLE_JOB, PRESET_META, effectiveConfig, getState, markStale, newId, presetEdits, printerPreset, resolvePreset, selectPrinter, setState, toast, type JobView, type PlateObject, type State,
+  IDLE_JOB, PRESET_META, effectiveConfig, getState, markStale, newId, presetEdits, printerPreset, resolvePreset, selectPrinter, setState, subscribeStore, toast, type JobView, type PlateObject, type State,
 } from './state/store';
 import { documentGeneration, leaveDocument, newDocument, undoable } from './state/history';
 import { clearPlateJobs, currentPlates } from './plater/plates';
@@ -34,6 +34,7 @@ import { slotFilaments } from './profiles/slots';
 import { DEMO } from './demo/config';
 import { recordWarnings } from './engine-warnings';
 import { pickFiles } from './file-picker';
+import { printerReady } from './workspace-sheet';
 
 export async function init() {
   app.send({ type: 'BOOT' });
@@ -532,6 +533,29 @@ export async function slice(calib?: { kind: string; params: string; head?: strin
     failed: (error, errorCode) => { if (current()) setState(st => ({job: {...st.job, state: 'failed', error, errorCode}})); },
   }, calib?.kind);
 }
+
+const canReslice = (s: State) => !DEMO && s.objects.length > 0 && printerReady(s) && !s.job.calib && !outsideVolumeWarning(s);
+
+export function openPreview() {
+  setState({ tab: 'preview' });
+  const s = getState();
+  if ((s.job.state === 'idle' || s.job.state === 'done' && s.job.stale) && canReslice(s)) void slice();
+}
+
+export function resliceStalePreview() {
+  const s = getState();
+  if (s.tab === 'preview' && s.job.state === 'done' && s.job.stale && canReslice(s)) void slice();
+}
+
+let resliceTimer = 0, resliceInputs: unknown[] = [];
+subscribeStore(() => {
+  const s = getState(), inputs = [s.dirty, s.filamentEdits, s.processVariant, s.printer, s.process, s.objects, s.events, s.projectSlots];
+  const changed = inputs.some((v, i) => v !== resliceInputs[i]);
+  resliceInputs = inputs;
+  if (!changed || s.tab !== 'preview' || s.job.state !== 'done' || !s.job.stale) return;
+  clearTimeout(resliceTimer);
+  resliceTimer = window.setTimeout(resliceStalePreview, 3000);
+});
 
 export function cancelSlice() {
   void import('./flow/slice').then((m) => m.cancelSlice());

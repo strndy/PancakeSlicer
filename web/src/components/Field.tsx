@@ -16,6 +16,7 @@ import { display } from '../profiles/format';
 import { ScopeMark } from '../profiles/Scope';
 import type { ChangeTarget } from '../state/changes';
 import { slotFilaments } from '../profiles/slots';
+import { resliceStalePreview } from '../actions';
 
 const LabelId = createContext<string | undefined>(undefined);
 const useLabel = () => ({ 'aria-labelledby': useContext(LabelId) });
@@ -267,17 +268,17 @@ function TextBox(props: { value: string; label?: string; multiline?: boolean; nu
   const shown = (v: string) => percentOnly ? v.replace(/\s*%\s*$/, '') : v;
   const [text, setText] = useState(shown(props.value));
   const issue = props.numeric && props.def && text.trim() !== '' ? fieldIssue(text, bounded(props.def)) : undefined;
-  const latest = useRef(text), byKey = useRef(false);
+  const latest = useRef(text), byKey = useRef(false), reslice = useRef(false);
   latest.current = text;
   useEffect(() => setText(shown(props.value)), [props.value]);
   const stored = useRef(props.value); stored.current = props.value;
   const settle = () => requestAnimationFrame(() => setTimeout(() => { latest.current = shown(stored.current); setText(shown(stored.current)); }, 0));
   const commit = () => {
-    const keyed = byKey.current; byKey.current = false;
+    const keyed = byKey.current, again = reslice.current; byKey.current = reslice.current = false;
     const text = percentOnly && latest.current.trim() && !latest.current.trim().endsWith('%') ? `${latest.current.trim()}%` : latest.current;
-    if (props.readOnly || text === props.value) return;
+    if (props.readOnly || text === props.value) { if (again) resliceStalePreview(); return; }
     if (props.numeric && props.def && rejectField(text, props.value, props.def, label)) { settle(); return; }
-    if (keyed) { const commitText = props.onCommit; afterPaint(() => { commitText(text); settle(); }); }
+    if (keyed) { const commitText = props.onCommit; afterPaint(() => { commitText(text); settle(); if (again) resliceStalePreview(); }); }
     else { props.onCommit(text); settle(); }
   };
   const stepNumber = (direction: number, big = false, keyboard = false) => {
@@ -310,7 +311,7 @@ function TextBox(props: { value: string; label?: string; multiline?: boolean; nu
   if (!props.numeric) return (
     <span className="control-text">
       <input {...named} className="text" value={text} readOnly={props.readOnly} placeholder={props.placeholder} list={props.list}
-        onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') { byKey.current = true; (e.target as HTMLInputElement).blur(); } }} />
+        onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') { byKey.current = true; reslice.current = !!e.currentTarget.closest('aside.sidebar'); e.currentTarget.blur(); } }} />
     </span>
   );
   const side = props.def?.sidetext?.trim().replace(/^money(?=\/)/, ''), either = side?.match(/^(.+?) or %$/)?.[1], pct = text.trim().endsWith('%');
@@ -330,7 +331,7 @@ function TextBox(props: { value: string; label?: string; multiline?: boolean; nu
         onChange={(e) => { latest.current = e.target.value; setText(e.target.value); }}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') { byKey.current = true; (e.target as HTMLInputElement).blur(); }
+          if (e.key === 'Enter') { byKey.current = true; reslice.current = !!e.currentTarget.closest('aside.sidebar'); e.currentTarget.blur(); }
           else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepNumber(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey, true); }
         }}
       />
