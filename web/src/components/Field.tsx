@@ -16,7 +16,7 @@ import { display } from '../profiles/format';
 import { ScopeMark } from '../profiles/Scope';
 import type { ChangeTarget } from '../state/changes';
 import { slotFilaments } from '../profiles/slots';
-import { outsideVolumeWarning, slice } from '../actions';
+import { resliceStalePreview } from '../actions';
 
 const LabelId = createContext<string | undefined>(undefined);
 const useLabel = () => ({ 'aria-labelledby': useContext(LabelId) });
@@ -205,7 +205,7 @@ function Widget({ def, label, value, onCommit, glyph }: { def: OptionDef; label:
   if (base === 'bool') {
     const on = value === true || value === 'true' || value === '1' || value === 1;
     return (
-      <Check {...named} checked={on} disabled={def.readonly} onClick={(e) => { if (e.currentTarget.closest('aside.sidebar')) resliceSoon(); }} onCheckedChange={(v) => onCommit(v ? '1' : '0')} />
+      <Check {...named} checked={on} disabled={def.readonly} onCheckedChange={(v) => onCommit(v ? '1' : '0')} />
     );
   }
   if (def.enum_values?.length && /^(select_open|[if]_enum_open)$/.test(def.gui_type ?? '')) {
@@ -252,9 +252,6 @@ let pendingCommit: (() => void) | null = null;
 const flushCommit = () => { const run = pendingCommit; pendingCommit = null; run?.(); };
 if (typeof window !== 'undefined') for (const type of ['pointerdown', 'keydown', 'pagehide'] as const) window.addEventListener(type, flushCommit, true);
 const afterPaint = (run: () => void) => { flushCommit(); pendingCommit = run; requestAnimationFrame(() => setTimeout(flushCommit, 0)); };
-const resliceStalePreview = () => { const s = getState(); if (s.tab === 'preview' && s.job.state === 'done' && s.job.stale && !outsideVolumeWarning(s)) void slice(); };
-let resliceTimer = 0;
-const resliceSoon = () => { clearTimeout(resliceTimer); resliceTimer = window.setTimeout(resliceStalePreview, 3000); };
 
 export function NumberBox({ labelledBy, label, value, min, max, unit, readOnly, onCommit }: { labelledBy: string; label: string; value: number; min: number; max: number; unit: string; readOnly?: boolean; onCommit(value: number): void }) {
   const def = { key: '', type: 'int', label, min, max, sidetext: unit, mode: 'simple' } as unknown as OptionDef;
