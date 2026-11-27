@@ -34,6 +34,7 @@ import { slotFilaments } from './profiles/slots';
 import { DEMO } from './demo/config';
 import { recordWarnings } from './engine-warnings';
 import { pickFiles } from './file-picker';
+import { printerReady } from './workspace-sheet';
 
 export async function init() {
   app.send({ type: 'BOOT' });
@@ -531,6 +532,12 @@ export async function slice(calib?: { kind: string; params: string; head?: strin
     done: (job) => { if (!current()) return; bindSlicePreview(navigation, job.id); setState({job: {...job, stale: plateSignature(getState()) !== signature}}); },
     failed: (error, errorCode) => { if (current()) setState(st => ({job: {...st.job, state: 'failed', error, errorCode}})); },
   }, calib?.kind);
+}
+
+export function openPreview() {
+  setState({ tab: 'preview' });
+  const s = getState();
+  if (s.objects.length && printerReady(s) && (s.job.state === 'idle' || s.job.state === 'done' && s.job.stale) && !outsideVolumeWarning(s)) void slice();
 }
 
 export function cancelSlice() {

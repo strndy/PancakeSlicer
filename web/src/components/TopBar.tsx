@@ -8,7 +8,7 @@ import { MenuButton, type MenuEntry } from './Menu';
 import { showProjects } from '../flow/project';
 import { openPalette } from '../commands/registry';
 import { Suspense, useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react';
-import { arrangeAll, canExport, STALE_RESULT_TIP, download, newProject, openFileDialog, openProjectDialog, outputKind, outsideVolumeWarning, saveProject, slice } from '../actions';
+import { arrangeAll, canExport, STALE_RESULT_TIP, download, newProject, openFileDialog, openProjectDialog, openPreview, outputKind, outsideVolumeWarning, saveProject, slice } from '../actions';
 import { deleteAll, removeSelected, setState, useStore } from '../state/store';
 import { canPaste, copySelection, cutSelection, pasteClipboard, selectAll } from '../edit';
 import { historyVersion, redo, redoName, redoNames, redoSteps, subscribeHistory, undo, undoName, undoNames, undoSteps } from '../state/history';
@@ -233,7 +233,7 @@ export function TabBar() {
         <button type="button" aria-label="Prepare" aria-pressed={tab === 'prepare'} className="view-tab" onClick={() => setState({ tab: 'prepare' })}>
           <span>Prepare</span>
         </button>
-        <button type="button" aria-label="Preview" aria-pressed={tab === 'preview'} className="view-tab" onClick={() => setState({ tab: 'preview' })}>
+        <button type="button" aria-label="Preview" aria-pressed={tab === 'preview'} className="view-tab" onClick={openPreview}>
           <span>Preview</span>
         </button>
         <button type="button" aria-label="Device" aria-pressed={tab === 'device'} className="view-tab" onClick={() => setState({ tab: 'device' })}>

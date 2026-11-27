@@ -5,7 +5,7 @@ import { openPalette } from './commands/registry';
 import { Suspense, useEffect, useRef, useState, type ComponentType } from 'react';
 import { isPaint, paintKeyTool, setPaintTool, togglePaint, type PaintKind } from './plater/paint';
 import { toggleViewOption } from './plater/viewOptions';
-import { addInstance, arrangeAll, download, importFiles, newProject, openFileDialog, openProjectDialog, removeInstance, toolbarOperation, saveProject, toggleBoolean, toggleText } from './actions';
+import { addInstance, arrangeAll, download, openPreview, importFiles, newProject, openFileDialog, openProjectDialog, removeInstance, toolbarOperation, saveProject, toggleBoolean, toggleText } from './actions';
 import { setCut, toggleCut } from './plater/cut';
 import { LoadingState } from './components/Notices';
 import { SidebarSkeleton } from './components/SidebarSkeleton';
@@ -191,7 +191,7 @@ export default function App() {
       else if (ctrl) return;
       else if (e.key === 'Tab' && !e.shiftKey && !e.altKey && document.activeElement instanceof HTMLCanvasElement) {
         e.preventDefault();
-        setState((s) => ({ tab: s.tab === 'prepare' ? 'preview' : 'prepare' }));
+        if (getState().tab === 'prepare') openPreview(); else setState({ tab: 'prepare' });
         focusSoon(visibleCanvas);
       }
       else if (!prepare) return;
