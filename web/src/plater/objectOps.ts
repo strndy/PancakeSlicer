@@ -4,7 +4,8 @@ import { getState, newId, printerPreset, setState, toast, updateVolume, type Pla
 import { undoable } from '../state/history';
 import { centred, instanceBox, instanceMatrix, loadMesh, request, volumeBox, volumeWorld } from './geometry';
 import objectKeys from '../object_options.json';
-import { pickFiles } from '../file-picker';
+import { fileHandle, freshFile, pickFileList, pickFiles, storedHandle } from '../file-picker';
+import { blobKey } from '../persist/session';
 
 const replace = (name: string, objects: PlateObject[], selected?: { object: number; instance: number }) =>
   undoable(name, () => setState({ objects, ...(selected ? { selected } : {}) }));
@@ -94,6 +95,40 @@ export function replaceFile(id: number) {
       toast('objectops_failed', { detail: e instanceof Error ? e.message : String(e) });
     }
   });
+}
+
+const MESH_FILE = /\.(stl|obj)$/i;
+const canReload = (o: PlateObject) => !o.project && MESH_FILE.test(o.source.name);
+
+export async function reloadFromDisk(ids: number[]) {
+  const targets = getState().objects.filter((o) => ids.includes(o.id) && canReload(o));
+  if (!targets.length) return;
+  const files = new Map<number, File>(), missing: PlateObject[] = [];
+  for (const o of targets) {
+    const key = blobKey(o.source), handle = fileHandle(o.source) ?? (key ? await storedHandle(key) : undefined);
+    try { if (handle) files.set(o.id, await freshFile(handle)); else missing.push(o); }
+    catch { missing.push(o); }
+  }
+  if (missing.length) {
+    const picked = await pickFileList('.stl,.STL,.obj,.OBJ', missing.length > 1);
+    if (!picked.length && !files.size) return;
+    for (const o of missing) {
+      const file = picked.find((f) => f.name.toLowerCase() === o.source.name.toLowerCase()) ?? (missing.length === 1 ? picked[0] : undefined);
+      if (file) files.set(o.id, file);
+    }
+  }
+  try {
+    const loaded = new Map<File, THREE.BufferGeometry>(), geometry = new Map<number, THREE.BufferGeometry>();
+    for (const [id, file] of files) {
+      if (!loaded.has(file)) loaded.set(file, await loadMesh(file));
+      geometry.set(id, loaded.get(file)!);
+    }
+    if (geometry.size) replace('Reload from disk', getState().objects.map((x) => (geometry.has(x.id)
+      ? { ...x, geometry: geometry.get(x.id)!, source: files.get(x.id)!, paint: undefined, layerProfile: undefined } : x)));
+    toast('reloaded_from_disk', { done: geometry.size, total: targets.length });
+  } catch (e) {
+    toast('objectops_failed', { detail: e instanceof Error ? e.message : String(e) });
+  }
 }
 
 export function mirrorVolume(objectId: number, volumeId: number, axis: 0 | 1 | 2) {

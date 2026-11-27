@@ -82,7 +82,9 @@ export default function ContextMenu() {
       { label: 'To Objects', action: () => void toolbarOperation('split'), tip: 'Split the selected object into multiple objects' },
       { label: 'To Parts', action: () => void toolbarOperation('split-parts'), disabled: !!o?.volumes?.length, tip: 'Split the selected object into multiple parts' },
     ] }]),
-    ...(all ? [{ label: 'Merge', action: () => void ops().then((m) => m.mergeObjects(ids)), disabled: !!s.project || ids.length < 2,
+    ...(all ? [{ label: 'Reload from disk', action: () => void ops().then((m) => m.reloadFromDisk(ids)), disabled: !editable || !s.objects.some((x) => ids.includes(x.id) && reloadable(x)),
+      tip: 'Reload the selected objects\' meshes from their files' },
+      { label: 'Merge', action: () => void ops().then((m) => m.mergeObjects(ids)), disabled: !!s.project || ids.length < 2,
       tip: 'Merge the selected objects into a single multi-part object' },
       { label: 'Paste Process Settings', action: () => void ops().then((m) => m.pasteSettings(ids.map((id) => ({ object: id })))), disabled: s.settingsClipboard?.kind !== 'object' || !!s.project, tip: 'Paste Process Settings' }] : [
       { label: 'Auto orient', action: () => void toolbarOperation('orient'), disabled: !editable, tip: 'Automatically orient the object for better print quality' },
@@ -96,6 +98,7 @@ export default function ContextMenu() {
       { label: 'Copy Process Settings', action: () => void ops().then((m) => m.copySettings(o.id)), disabled: !!o.project, tip: 'Copy Process Settings' },
       { label: 'Paste Process Settings', action: () => void ops().then((m) => m.pasteSettings([{ object: o.id }])), disabled: s.settingsClipboard?.kind !== 'object' || !!o.project, tip: 'Paste Process Settings' },
       { label: 'Replace 3D file...', action: () => void ops().then((m) => m.replaceFile(o.id)), disabled: !editable || !!o.project, tip: 'Replace the object\'s mesh with another file' },
+      { label: 'Reload from disk', action: () => void ops().then((m) => m.reloadFromDisk([o.id])), disabled: !editable || !reloadable(o), tip: 'Reload the object\'s mesh from its file' },
     ]),
     { label: 'Mirror', disabled: !editable, tip: 'Mirror object', sub: ([0, 1, 2] as const).map((a) => (
       { label: `Along ${'XYZ'[a]} Axis`, action: () => void mirrorSelection(a), tip: `Mirror along the ${'XYZ'[a]} Axis` })) },
@@ -131,6 +134,7 @@ export default function ContextMenu() {
   return <ActionMenu items={items} label="Context menu" at={{ x: menu.x, y: menu.y }} onClose={close} />;
 }
 
+const reloadable = (o: PlateObject) => !o.project && /\.(stl|obj)$/i.test(o.source.name);
 const FLUSH: [string, string][] = [['flush_into_infill', "Flush into objects' infill"], ['flush_into_objects', 'Flush into this object'], ['flush_into_support', "Flush into objects' support"]];
 const on = (v: unknown) => v === true || v === 1 || v === '1' || v === 'true';
 
