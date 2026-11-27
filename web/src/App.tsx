@@ -6,6 +6,7 @@ import { Suspense, useEffect, useRef, useState, type ComponentType } from 'react
 import { isPaint, paintKeyTool, setPaintTool, togglePaint, type PaintKind } from './plater/paint';
 import { toggleViewOption } from './plater/viewOptions';
 import { addInstance, arrangeAll, download, importFiles, newProject, openFileDialog, openProjectDialog, removeInstance, toolbarOperation, saveProject, toggleBoolean, toggleText } from './actions';
+import { droppedFiles } from './file-picker';
 import { setCut, toggleCut } from './plater/cut';
 import { LoadingState } from './components/Notices';
 import { SidebarSkeleton } from './components/SidebarSkeleton';
@@ -295,7 +296,7 @@ export default function App() {
       setDragOver(false);
       if (!accepts(e) || e.defaultPrevented) return;
       e.preventDefault();
-      void importFiles(e.dataTransfer!.files);
+      void droppedFiles(e.dataTransfer!).then((files) => importFiles(files));
     };
     const events = { dragenter: enter, dragleave: leave, dragover: over, drop } as const;
     for (const [k, f] of Object.entries(events)) window.addEventListener(k, f as EventListener);

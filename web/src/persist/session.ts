@@ -1,3 +1,4 @@
+import { fileHandle, rememberHandle } from '../file-picker';
 import type * as THREE from 'three';
 import { loadMesh, loadProject, placeholderGeometry, volumeGeometry } from '../plater/geometry';
 import type { ProjectPlate } from '../plater/threemf';
@@ -19,6 +20,7 @@ export type StoredDoc = Omit<Doc, 'objects' | 'projectPlates' | 'project' | 'pro
 
 const blobKeys = new WeakMap<Blob, string>();
 const keyOf = (b: Blob) => blobKeys.get(b) ?? (blobKeys.set(b, newKey()), blobKeys.get(b)!);
+export const blobKey = (blob: Blob) => blobKeys.get(blob);
 export function assignBlobKey(blob: Blob, key: string) {
   if (!blobKeys.has(blob)) blobKeys.set(blob, key);
 }
@@ -29,7 +31,7 @@ export const nameOf = (doc: Doc) => (doc.projectName ?? doc.project?.name ?? doc
 
 export function encode(doc: Doc): { stored: StoredDoc; blobs: Map<string, Blob> } {
   const blobs = new Map<string, Blob>();
-  const keep = (b: Blob) => { const k = keyOf(b); blobs.set(k, b); return k; };
+  const keep = (b: Blob) => { const k = keyOf(b), handle = b instanceof File && fileHandle(b); blobs.set(k, b); if (handle) rememberHandle(k, handle); return k; };
   const volume = ({ geometry: g, ...rest }: Volume): StoredVolume => ({ ...rest, geometry: {
     position: g.attributes.position.array as Float32Array, normal: g.attributes.normal?.array as Float32Array | undefined,
     index: (g.index?.array as Uint32Array | undefined) ?? null } });
